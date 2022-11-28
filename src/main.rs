@@ -79,12 +79,26 @@ fn get_entry_by_date(e_vector: &Vec<Entry>, date:NaiveDate) -> Option<&Entry>{
 }
 
 
-
+// Print an entry for a date
+fn print_entry_by_date(e_vector: &Vec<Entry>, date:NaiveDate){
+    let entry = get_entry_by_date(e_vector, date);
+    match entry {
+        Some(ent) =>     {
+            println!("{}",date.format("\x1b[1m == [%d/%m/%y] ==\x1b[0m"));
+            let lines=textwrap::wrap(&ent.text,80);
+            for l in lines{
+                println!("{}",l);
+            }
+        },
+        _=>{},
+    }
+}
 
 
 fn main(){
 
     let mut date = "".to_string();
+    let mut next = 0;
 
     {  // argparse block code
         let mut ap = ArgumentParser::new();
@@ -92,6 +106,10 @@ fn main(){
         ap.refer(&mut date)
             .add_option(&["-d", "--date"], Store,
                         "Mostrar entradas de una fecha");
+
+        ap.refer(&mut next)
+            .add_option(&["-n", "--next"], Store,
+                        "Mostrar las siguientes entradas sobre la fecha");
 
         let args: Vec<_> = env::args().collect();
         if args.len() == 1 {
@@ -115,12 +133,18 @@ fn main(){
 
     entries_vector.sort_by(|a,b| b.date.cmp(&a.date));
 
-    if date!=""{
+    if date!=""{ 
         let real_date = parse_date(date);
-        let entry = get_entry_by_date(&entries_vector, real_date);
-        match entry {
-            Some(ent) =>     println!("{}",ent.text),
-            _=>{},
+        print_entry_by_date(&entries_vector, real_date);
+
+        if next>0{
+            for i in 0..next{
+                let next_date = real_date.checked_add_days(Days::new(i));
+                match next_date{
+                    Some(nxt)=> print_entry_by_date(&entries_vector,nxt),
+                    _=>{},
+                }
+            }
         }
     }
 }
