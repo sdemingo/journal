@@ -3,6 +3,8 @@
 use std::fs;
 use std::env;
 use std::process;
+use std::cmp::Ordering;
+
 use chrono::*;
 use argparse::*;
 
@@ -16,7 +18,7 @@ struct Entry{
 const JOURNAL_PATH: &str = "/notebook/diarios/2022";
 
 
-
+// Parsed and whole entry from an text fragment
 fn parse_entries(e_vector: &mut Vec<Entry>, file_path: &String){
 
     let contents = fs::read_to_string(file_path)
@@ -24,7 +26,7 @@ fn parse_entries(e_vector: &mut Vec<Entry>, file_path: &String){
     let entries_text = contents.split("## ");
     for e in entries_text{
         let entry_title = e.split("\n").nth(0).unwrap();
-        let edate=parse_date(entry_title.to_string(), &file_path);
+        let edate=parse_entry_date(entry_title.to_string(), &file_path);
         match edate {
             Ok(date) => {
                 let entry = Entry{date: date, text:e.to_string()};
@@ -35,8 +37,8 @@ fn parse_entries(e_vector: &mut Vec<Entry>, file_path: &String){
     }
 }
 
-
-fn parse_date(entry_title:String, file_path: &String)  -> ParseResult<NaiveDate>{
+// Parsed an entry date from the entry title. It's first line
+fn parse_entry_date(entry_title:String, file_path: &String)  -> ParseResult<NaiveDate>{
     
     let day: String = entry_title.chars()
         .filter(|entry_title| entry_title.is_digit(10))
@@ -53,16 +55,43 @@ fn parse_date(entry_title:String, file_path: &String)  -> ParseResult<NaiveDate>
 }
 
 
+
+// Parsed an string date from user
+fn parse_date(sdate:String) -> NaiveDate{
+    let edate=NaiveDate::parse_from_str(&sdate,"%d/%m/%y");
+    return match edate {
+        Ok(date) => date,
+        Err(_err) => Utc::now().naive_utc().date(),
+    };        
+}
+
+
+
+
+// Get a entry by a date
+fn get_entry_by_date(e_vector: &Vec<Entry>, date:NaiveDate) -> Option<&Entry>{
+    for e in e_vector{
+        if e.date.cmp(&date) == Ordering::Equal{
+            return Some(e);
+        }
+    }
+    return None;
+}
+
+
+
+
+
 fn main(){
 
     let mut date = "".to_string();
 
-    {  // argparse block
+    {  // argparse block code
         let mut ap = ArgumentParser::new();
         ap.set_description("Aplicación para la gestión de diarios");
         ap.refer(&mut date)
             .add_option(&["-d", "--date"], Store,
-            "Mostrar entradas de una fecha");
+                        "Mostrar entradas de una fecha");
 
         let args: Vec<_> = env::args().collect();
         if args.len() == 1 {
@@ -84,11 +113,14 @@ fn main(){
         parse_entries(&mut entries_vector, &path.unwrap().path().display().to_string());
     }
 
-    //println!("Se añadieron {} entradas",entries_vector.len());
-
     entries_vector.sort_by(|a,b| b.date.cmp(&a.date));
-    
-    //println!("{}",entries_vector.last().unwrap().text);
-    //println!("{}",entries_vector[0].text);
 
+    if date!=""{
+        let real_date = parse_date(date);
+        let entry = get_entry_by_date(&entries_vector, real_date);
+        match entry {
+            Some(ent) =>     println!("{}",ent.text),
+            _=>{},
+        }
+    }
 }
