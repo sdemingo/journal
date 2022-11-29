@@ -86,19 +86,28 @@ fn print_entry_by_date(e_vector: &Vec<Entry>, date: NaiveDate) {
 fn main() {
     let mut date = "".to_string();
     let mut next = 0;
+    let mut previous =0;
+    let mut today = false;
 
     {
         // argparse block code
         let mut ap = ArgumentParser::new();
         ap.set_description("Aplicación para la gestión de diarios");
         ap.refer(&mut date)
-            .add_option(&["-d", "--date"], Store, "Mostrar entradas de una fecha");
+            .add_option(&["-d", "--date"], Store, 
+                        "Mostrar entradas de una fecha");
 
-        ap.refer(&mut next).add_option(
-            &["-n", "--next"],
-            Store,
-            "Mostrar las siguientes entradas sobre la fecha",
-        );
+        ap.refer(&mut today)
+            .add_option(&["-t", "--today"], StoreTrue, 
+                        "Mostrar la entrada de hoy");
+
+        ap.refer(&mut next)
+            .add_option(&["-n", "--next"],Store,
+                        "Mostrar las siguientes entradas sobre la fecha");
+
+        ap.refer(&mut previous)
+            .add_option(&["-p", "--prev"],Store,
+                        "Mostrar los N días anteriores a hoy");
 
         let args: Vec<_> = env::args().collect();
         if args.len() == 1 {
@@ -138,6 +147,7 @@ fn main() {
 
     entries_vector.sort_by(|a, b| b.date.cmp(&a.date));
 
+    // Show from a date in the past
     if date != "" {
         let real_date = parse_date(date);
         print_entry_by_date(&entries_vector, real_date);
@@ -151,5 +161,25 @@ fn main() {
                 }
             }
         }
+        process::exit(0);
+    }
+
+    // Show from today
+    today = previous == 0;
+    if today || previous > 0{
+        let real_date = Utc::now().naive_utc().date();
+        print_entry_by_date(&entries_vector, real_date);
+
+        if previous > 0 {
+            for i in 0..previous {
+                let prev_date = real_date.checked_sub_days(Days::new(i+1));
+                match prev_date {
+                    Some(prv) => print_entry_by_date(&entries_vector, prv),
+                    _ => {}
+                }
+            }
+        }
+        process::exit(0);
+        
     }
 }
