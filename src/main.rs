@@ -11,7 +11,6 @@ struct Entry {
     text: String,
 }
 
-const JOURNAL_PATH: &str = "/notebook/diarios/2022";
 
 // Parsed and whole entry from an text fragment
 fn parse_entries(e_vector: &mut Vec<Entry>, file_path: &String) {
@@ -110,17 +109,31 @@ fn main() {
         }
     }
 
-    let mut path = env::var("HOME").expect("$HOME is not set");
-    path.push_str(JOURNAL_PATH);
-
     let mut entries_vector: Vec<Entry> = Vec::new();
 
-    let paths = fs::read_dir(path).unwrap();
-    for path in paths {
-        parse_entries(
-            &mut entries_vector,
-            &path.unwrap().path().display().to_string(),
-        );
+    // Load journals file an fill the entries vector
+    let varpath = env::var("JOURNALPATH");
+    let path = match varpath{
+        Ok(path) => path,
+        Err(_err)=> {
+            println!("Yo must set JOURNALPATH in your environment");
+            process::exit(0);
+        },    
+    };
+
+    let year_dirs = fs::read_dir(path).unwrap();
+    for year in year_dirs{
+        let year_path = year.as_ref().unwrap().path();
+        if year_path.is_dir(){
+            let journals = fs::read_dir(year_path).unwrap();
+            for j in journals{
+                parse_entries(
+                    &mut entries_vector,
+                    &j.unwrap().path().display().to_string(),
+                );
+            }
+        }
+        
     }
 
     entries_vector.sort_by(|a, b| b.date.cmp(&a.date));

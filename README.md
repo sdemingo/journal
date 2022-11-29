@@ -10,7 +10,7 @@ With this command I can extract information from this logs file. This app
 expect your journals directory as:
 
 ```
-journal_dir
+$JOURNALPATH
      |
      |------ 2022
      |       |------ 2022-01.md
@@ -57,6 +57,9 @@ friends, etc.) to remark special events about something.
 
 
 ## Usage
+
+First, you have to set `JOURNALPATH` variable in your environment with the path
+of your journals directory.
 
 You can use `journal` with nexts options:
 
