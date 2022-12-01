@@ -65,11 +65,12 @@ You can use `journal` with nexts options:
 
 * `-d dd/mm/yy`: Show the entry for this day.
 * `-n N`: Show the nexts `N` entries from `-d` option.
+* `-t N`: Show today with `N=0` or the `N` previous days.
+* `-p pattern`: Show entries that contains the pattern. You can combine with -m` or `-y`.
+* 
 
 Options are not implement yet:
 
-* `-m month`: Show entries only for this month of the current year.
-* `-y year`: Show entries only for this year.
 * `-t tag`: Show the tags entries in current month. You can combine with `-m` or `-y`.
-* `-p pattern`: Show entries that contains the pattern. You can combine with `-m` or `-y`.
+
 
