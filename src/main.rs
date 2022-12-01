@@ -11,7 +11,6 @@ struct Entry {
     text: String,
 }
 
-
 // Parsed and whole entry from an text fragment
 fn parse_entries(e_vector: &mut Vec<Entry>, file_path: &String) {
     let contents = fs::read_to_string(file_path).expect("ERROR: No se encuentra fichero indicado");
@@ -68,46 +67,79 @@ fn get_entry_by_date(e_vector: &Vec<Entry>, date: NaiveDate) -> Option<&Entry> {
     return None;
 }
 
-// Print an entry for a date
-fn print_entry_by_date(e_vector: &Vec<Entry>, date: NaiveDate) {
+// Filter entries from e_vector for a date
+/*
+
+Retornar el vector filtrado
+
+*/
+fn filter_by_date(e_vector: &Vec<Entry>, date: NaiveDate){
     let entry = get_entry_by_date(e_vector, date);
     match entry {
         Some(ent) => {
-            println!("{}", date.format("\x1b[1m == [%d/%m/%y] ==\x1b[0m"));
-            let lines = textwrap::wrap(&ent.text, 80);
-            for l in lines {
-                println!("{}", l);
-            }
+            print_entry(&ent);
         }
         _ => {}
+    }
+}
+
+
+// Print an entry
+fn print_entry(entry: &Entry){
+    println!("{}", entry.date.format("\x1b[1m == [%d/%m/%y] ==\x1b[0m"));
+    let lines = textwrap::wrap(&entry.text, 80);
+    for l in lines {
+        println!("{}", l);
+    }
+}
+
+
+// Print vector entries
+fn print_vector_entries(e_vector: &Vec<Entry>){
+    for e in e_vector{
+        print_entry(e);
     }
 }
 
 fn main() {
     let mut date = "".to_string();
     let mut next = 0;
-    let mut previous =0;
+    let mut previous = 0;
     let mut today = false;
+    let mut pattern = "".to_string();
 
     {
         // argparse block code
         let mut ap = ArgumentParser::new();
         ap.set_description("Aplicación para la gestión de diarios");
         ap.refer(&mut date)
-            .add_option(&["-d", "--date"], Store, 
-                        "Mostrar entradas de una fecha");
-
+            .add_option(
+                &["-d", "--date"], 
+                Store, 
+                "Mostrar entradas de una fecha");
+        
         ap.refer(&mut today)
-            .add_option(&["-t", "--today"], StoreTrue, 
-                        "Mostrar la entrada de hoy");
+            .add_option(
+                &["-t", "--today"], 
+                StoreTrue, 
+                "Mostrar la entrada de hoy");
 
-        ap.refer(&mut next)
-            .add_option(&["-n", "--next"],Store,
-                        "Mostrar las siguientes entradas sobre la fecha");
+        ap.refer(&mut next).add_option(
+            &["-n", "--next"],
+            Store,
+            "Mostrar las siguientes entradas sobre la fecha",
+        );
 
-        ap.refer(&mut previous)
-            .add_option(&["-p", "--prev"],Store,
-                        "Mostrar los N días anteriores a hoy");
+        ap.refer(&mut previous).add_option(
+            &["-p", "--prev"],
+            Store,
+            "Mostrar los N días anteriores a hoy",
+        );
+
+        ap.refer(&mut pattern).add_option(
+            &["-p", "--pattern"], 
+            Store, 
+            "Mostrar entradas que contienen un patrón");
 
         let args: Vec<_> = env::args().collect();
         if args.len() == 1 {
@@ -122,27 +154,26 @@ fn main() {
 
     // Load journals file an fill the entries vector
     let varpath = env::var("JOURNALPATH");
-    let path = match varpath{
+    let path = match varpath {
         Ok(path) => path,
-        Err(_err)=> {
-            println!("Yo must set JOURNALPATH in your environment");
+        Err(_err) => {
+            println!("You must set JOURNALPATH in your environment");
             process::exit(0);
-        },    
+        }
     };
 
     let year_dirs = fs::read_dir(path).unwrap();
-    for year in year_dirs{
+    for year in year_dirs {
         let year_path = year.as_ref().unwrap().path();
-        if year_path.is_dir(){
+        if year_path.is_dir() {
             let journals = fs::read_dir(year_path).unwrap();
-            for j in journals{
+            for j in journals {
                 parse_entries(
                     &mut entries_vector,
                     &j.unwrap().path().display().to_string(),
                 );
             }
         }
-        
     }
 
     entries_vector.sort_by(|a, b| b.date.cmp(&a.date));
@@ -150,36 +181,46 @@ fn main() {
     // Show from a date in the past
     if date != "" {
         let real_date = parse_date(date);
-        print_entry_by_date(&entries_vector, real_date);
+        filter_by_date(&entries_vector, real_date);
 
         if next > 0 {
             for i in 0..next {
                 let next_date = real_date.checked_add_days(Days::new(i));
                 match next_date {
-                    Some(nxt) => print_entry_by_date(&entries_vector, nxt),
+                    Some(nxt) => filter_by_date(
+                        &entries_vector, 
+                        nxt),
                     _ => {}
                 }
             }
         }
+
+        // Filtrar por patrón
         process::exit(0);
     }
 
+
+
+
     // Show from today
     today = previous == 0;
-    if today || previous > 0{
+    if today || previous > 0 {
         let real_date = Utc::now().naive_utc().date();
-        print_entry_by_date(&entries_vector, real_date);
+        filter_by_date(&entries_vector, real_date);
 
         if previous > 0 {
             for i in 0..previous {
-                let prev_date = real_date.checked_sub_days(Days::new(i+1));
+                let prev_date = real_date.checked_sub_days(Days::new(i + 1));
                 match prev_date {
-                    Some(prv) => print_entry_by_date(&entries_vector, prv),
+                    Some(prv) => filter_by_date(
+                        &entries_vector, 
+                        prv),
                     _ => {}
                 }
             }
         }
+
+        // Filtrar por patron
         process::exit(0);
-        
     }
 }
