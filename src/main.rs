@@ -78,23 +78,31 @@ fn filter_by_pattern(e_vector: &mut Vec<Entry>, pattern: &String){
 }
 
 // Print an entry
-fn print_entry(entry: &Entry, wrap:bool) {
+fn print_entry(entry: &Entry, wrap:bool, pattern: &String) {
     println!("{}", entry.date.format("\x1b[1m == [%d/%m/%y] ==\x1b[0m"));
     if wrap{
         let lines = textwrap::wrap(&entry.text, 80);
         for l in lines {
-            println!("{}", l);
+            if pattern != ""{
+                println!("{}", l.replace(pattern,format!("\x1b[91m{}\x1b[0m",pattern).to_string().as_ref()));
+            }else{
+                println!("{}", l);
+            }
         }
     }else{
-        println!("{}", entry.text);
+        if pattern != ""{
+            println!("{}", entry.text.replace(pattern,format!("\x1b[91m{}\x1b[0m",pattern).to_string().as_ref()));
+        }else{
+            println!("{}", entry.text);
+        }
     }
 }
 
 // Print vector entries
-fn print_vector_entries(e_vector: &Vec<Entry>, wrap:bool) {
+fn print_vector_entries(e_vector: &Vec<Entry>, wrap:bool, pattern: &String) {
     for e in e_vector {
         if e.show{
-            print_entry(e, wrap);
+            print_entry(e, wrap, &pattern);
         }
     }
 }
@@ -186,7 +194,7 @@ fn main() {
             }
         }
 
-        print_vector_entries(&entries_vector, wrap);
+        print_vector_entries(&entries_vector, wrap, &pattern);
         process::exit(0);
     }
 
@@ -194,7 +202,7 @@ fn main() {
     // Show entries with a pattern
     if pattern!=""{
         filter_by_pattern(&mut entries_vector, &pattern);
-        print_vector_entries(&entries_vector,wrap);
+        print_vector_entries(&entries_vector,wrap, &pattern);
         process::exit(0);
     }
 
@@ -214,7 +222,7 @@ fn main() {
         }
     }
 
-    print_vector_entries(&entries_vector,wrap);
+    print_vector_entries(&entries_vector,wrap, &pattern);
     process::exit(0);
 
     
