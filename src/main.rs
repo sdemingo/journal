@@ -3,7 +3,7 @@ use std::env;
 use std::fs;
 use std::process;
 
-//use regex::Regex;
+use regex::Regex;
 use argparse::*;
 use chrono::*;
 
@@ -81,18 +81,17 @@ fn filter_by_pattern(e_vector: &mut Vec<Entry>, pattern: &String){
 
 // Filter entries by a tag
 fn filter_by_tag(e_vector: &mut Vec<Entry>, tag: &String){
-    let re=format!("{}:",tag);
+    let re = Regex::new(&format!(r"({}:.+)",tag)).unwrap();
     for e in e_vector.iter_mut(){
-        if e.text.contains(&re) {
+        if re.is_match(&e.text) {
             e.show = true;
-        }
-        
+        }        
     }
 }
 
 
 // Print an entry
-fn print_entry(entry: &Entry, wrap:bool, pattern: &String, tag: &String) {
+fn print_entry(entry: &Entry, wrap:bool, pattern: &String) {
     println!("{}", entry.date.format("\x1b[1m == [%d/%m/%y] ==\x1b[0m"));
 
     if wrap{
@@ -101,31 +100,50 @@ fn print_entry(entry: &Entry, wrap:bool, pattern: &String, tag: &String) {
             if pattern != ""{
                 println!("{}", l.replace(pattern,format!("\x1b[91m{}\x1b[0m",pattern).to_string().as_ref()));
             }else{
-                if tag!=""{
-                    println!("{}",l.replace(tag,format!("\x1b[93m{}\x1b[0m",tag).to_string().as_ref()));
-                }else{
-                    println!("{}", l);
-                }
+                println!("{}", l);
             }
         }
     }else{
         if pattern != ""{
             println!("{}", entry.text.replace(pattern,format!("\x1b[91m{}\x1b[0m",pattern).to_string().as_ref()));
         }else{
-            if tag!=""{
-                println!("{}", entry.text.replace(tag,format!("\x1b[93m{}\x1b[0m",tag).to_string().as_ref()));      
-            }else{
-                println!("{}", entry.text);
-            }
+            println!("{}", entry.text);
         }
     }
 }
+
+
+// Print an entry tag
+fn print_entry_tag(entry: &Entry, wrap:bool, tag: &String) {
+    println!("{}", entry.date.format("\x1b[1m == [%d/%m/%y] ==\x1b[0m"));
+
+    let re = Regex::new(&format!(r"({}:.+)",tag)).unwrap();
+    let caps = re.captures(&entry.text).unwrap();
+    let text = caps.get(1).map_or("", |m| m.as_str());
+
+    if wrap{
+        let lines = textwrap::wrap(&text, 80);
+        //println!("\n");
+        for l in lines {
+            println!("{}", l);
+        }
+        println!("\n");
+    }else{
+        println!("{}\n",text);
+    }
+}
+
+
 
 // Print vector entries
 fn print_vector_entries(e_vector: &Vec<Entry>, wrap:bool, pattern: &String, tag: &String) {
     for e in e_vector {
         if e.show{
-            print_entry(e, wrap, &pattern, &tag);
+            if tag!=""{
+                print_entry_tag(e, wrap, &tag);
+            }else{
+                print_entry(e, wrap, &pattern);
+            }
         }
     }
 }
