@@ -3,6 +3,7 @@ use std::env;
 use std::fs;
 use std::process;
 
+//use regex::Regex;
 use argparse::*;
 use chrono::*;
 
@@ -77,32 +78,54 @@ fn filter_by_pattern(e_vector: &mut Vec<Entry>, pattern: &String){
     }
 }
 
+
+// Filter entries by a tag
+fn filter_by_tag(e_vector: &mut Vec<Entry>, tag: &String){
+    let re=format!("{}:",tag);
+    for e in e_vector.iter_mut(){
+        if e.text.contains(&re) {
+            e.show = true;
+        }
+        
+    }
+}
+
+
 // Print an entry
-fn print_entry(entry: &Entry, wrap:bool, pattern: &String) {
+fn print_entry(entry: &Entry, wrap:bool, pattern: &String, tag: &String) {
     println!("{}", entry.date.format("\x1b[1m == [%d/%m/%y] ==\x1b[0m"));
+
     if wrap{
         let lines = textwrap::wrap(&entry.text, 80);
         for l in lines {
             if pattern != ""{
                 println!("{}", l.replace(pattern,format!("\x1b[91m{}\x1b[0m",pattern).to_string().as_ref()));
             }else{
-                println!("{}", l);
+                if tag!=""{
+                    println!("{}",l.replace(tag,format!("\x1b[93m{}\x1b[0m",tag).to_string().as_ref()));
+                }else{
+                    println!("{}", l);
+                }
             }
         }
     }else{
         if pattern != ""{
             println!("{}", entry.text.replace(pattern,format!("\x1b[91m{}\x1b[0m",pattern).to_string().as_ref()));
         }else{
-            println!("{}", entry.text);
+            if tag!=""{
+                println!("{}", entry.text.replace(tag,format!("\x1b[93m{}\x1b[0m",tag).to_string().as_ref()));      
+            }else{
+                println!("{}", entry.text);
+            }
         }
     }
 }
 
 // Print vector entries
-fn print_vector_entries(e_vector: &Vec<Entry>, wrap:bool, pattern: &String) {
+fn print_vector_entries(e_vector: &Vec<Entry>, wrap:bool, pattern: &String, tag: &String) {
     for e in e_vector {
         if e.show{
-            print_entry(e, wrap, &pattern);
+            print_entry(e, wrap, &pattern, &tag);
         }
     }
 }
@@ -112,6 +135,7 @@ fn main() {
     let mut next = 0;
     let mut today = 0;
     let mut pattern = "".to_string();
+    let mut tag="".to_string();
     let mut wrap = false;
 
     {
@@ -135,11 +159,15 @@ fn main() {
             Store,
             "Mostrar las siguientes entradas sobre la fecha",
         );
-
         ap.refer(&mut pattern).add_option(
             &["-p", "--pattern"],
             Store,
             "Mostrar entradas que contienen un patrón",
+        );
+        ap.refer(&mut tag).add_option(
+            &["-g", "--tag"],
+            Store,
+            "Mostrar entradas que contienen una etiqueta",
         );
 
         let args: Vec<_> = env::args().collect();
@@ -194,7 +222,7 @@ fn main() {
             }
         }
 
-        print_vector_entries(&entries_vector, wrap, &pattern);
+        print_vector_entries(&entries_vector, wrap, &pattern, &tag);
         process::exit(0);
     }
 
@@ -202,7 +230,15 @@ fn main() {
     // Show entries with a pattern
     if pattern!=""{
         filter_by_pattern(&mut entries_vector, &pattern);
-        print_vector_entries(&entries_vector,wrap, &pattern);
+        print_vector_entries(&entries_vector,wrap, &pattern, &tag);
+        process::exit(0);
+    }
+
+
+    // Show entries with a tag
+    if tag!=""{
+        filter_by_tag(&mut entries_vector, &tag);
+        print_vector_entries(&entries_vector,wrap, &pattern, &tag);
         process::exit(0);
     }
 
@@ -222,7 +258,7 @@ fn main() {
         }
     }
 
-    print_vector_entries(&entries_vector,wrap, &pattern);
+    print_vector_entries(&entries_vector,wrap, &pattern, &tag);
     process::exit(0);
 
     
